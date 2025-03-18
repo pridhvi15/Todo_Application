@@ -8,7 +8,7 @@ class Userform(forms.ModelForm):
 
         model = User
 
-        fields = ["usname","first_name","last_name","email","password"]
+        fields = ["username","first_name","last_name","email","password"]
 
         widgets = {
             "username":forms.TextInput(attrs={"class":"form-control","placeholder":"Enter the username:"}),
@@ -39,7 +39,11 @@ class Task_Form(forms.ModelForm):
             "priority" : forms.Select(attrs={"class":"form-control","placeholder":"Enter the priority"})
         }
 
+class ForgetForm(forms.Form):
 
+    username = forms.CharField(max_length=150,widget=forms.TextInput(attrs={"class":"form-control","placeholder":"enter username:"}))
 
+    email = forms.EmailField(widget=forms.EmailInput(attrs={"class":"form-control","placeholder":"enter email:"}))
 
+    new_password = forms.CharField(max_length=150,widget=forms.TextInput(attrs={"class":"form-control","placeholder":"enter password:"}))
 

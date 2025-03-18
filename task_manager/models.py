@@ -2,6 +2,8 @@ from django.db import models
 
 from django.contrib.auth.models import User
 
+from django.utils.timezone import now
+
 # Create your models here.
 
 
@@ -31,3 +33,15 @@ class TaskModel(models.Model):
 
     def __str__(self):
         return self.task_name
+    
+    def complete(self):
+
+        if self.status == False:
+
+            if now() < self.due_date:
+
+                self.point +=10
+
+            self.status = True
+
+            self.save()

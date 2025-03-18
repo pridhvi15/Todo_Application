@@ -1,9 +1,10 @@
 from django.shortcuts import render,redirect
 from django.views.generic import View
-from task_manager.forms import Userform,Login_form,Task_Form
+from task_manager.forms import Userform,Login_form,Task_Form,ForgetForm
 from task_manager.models import User,TaskModel
 from django.contrib.auth import authenticate,login,logout
 from django.utils.decorators import method_decorator
+from django.contrib.auth.hashers import make_password
 
 def is_user(fn):
 
@@ -19,7 +20,21 @@ def is_user(fn):
         
         else:
 
-            return redirect("login")
+            return redirect("signin")
+        
+    return wrapper
+
+def is_login(fn):
+
+    def wrapper(request,**kwargs):
+
+        if not request.user.is_authenticated:
+
+            return redirect("signin")
+        
+        else:
+
+            return fn(request,**kwargs)
         
     return wrapper
 
@@ -84,20 +99,29 @@ class Account_login(View):
         pwd = request.POST.get("password")
 
         user_obj = authenticate(request,username = u_name,password = pwd)
-        print("tear up=====")
+        # print("tear up=====")
 
         if user_obj:
 
-            print("tear down=====")
+            # print("tear down=====")
 
             login(request,user_obj)
 
-            return redirect("task_add")
+            return redirect("Welcome")
         
         else:
 
             return render(request,"login.html",{'form':form})
         
+class WelcomeView(View):
+
+    def get(self,request):
+
+        data = TaskModel.objects.filter(user = request.user,status = False).values('id','task_name','task_description')
+
+        return render(request,"welcome.html",{'data':data})
+
+@method_decorator (decorator=is_login,name="dispatch")       
 class TaskAddView(View):
 
     def get(self,request):
@@ -126,11 +150,12 @@ class TaskReadView(View):
 
     def get(self,request):
 
-        data = TaskModel.objects.filter(user=request.user)
+        data = TaskModel.objects.filter(user=request.user).order_by("status").values('id','task_name','task_description','status')
 
         return render(request,"alltask.html",{'data':data})
 
-@ method_decorator (decorator=is_user,name="dispatch")
+
+@ method_decorator ([is_user,is_login],name="dispatch")
 class TaskDeleteView(View):
 
     def get(self,request,**kwargs):
@@ -157,7 +182,7 @@ class TaskDetailsView(View):
 # url : lh:8000/task_manager/update/<int:pk>
 # get post
 
-@ method_decorator(decorator=is_user,name="dispatch")
+@ method_decorator([is_user,is_login],name="dispatch")
 class TaskUpdateView(View):
 
     def get(self,request,**kwargs):
@@ -188,19 +213,22 @@ class TaskUpdateView(View):
     
 class Task_complete(View):
 
-    def get(sef,request,**kwargs):
+    def get(seff,request,**kwargs):
 
         id = kwargs.get("pk")
 
         data = TaskModel.objects.get(id = id)
 
-        if data.status == False:
+        data = data.complete()
 
-            data.status = True
+        # if data.status == False:
 
-            data.save()
+        #     data.status = True
 
-        return redirect('all_task')
+        #     data.save()
+        next_url = request.GET.get("next") or "Welcome"
+
+        return redirect(next_url)
     
 class Signout(View):
 
@@ -210,7 +238,60 @@ class Signout(View):
         
         return redirect("home")
 
+class User_Details_View(View):
 
+    def get(self,request):
+
+        total = TaskModel.objects.filter(user = request.user).count()
+
+        # print(total)
+
+        completed = TaskModel.objects.filter(user = request.user,status = True).count()
+
+        incompleted = total-completed
+
+        data = TaskModel.objects.filter(user = request.user)
+
+        sum = 0
+
+        for i in data:
+
+            sum +=i.point
+
+        print(sum)
+
+        return render(request,"welcome.html",{"total":total,"completed":completed,"incomplete":incompleted,'sum':sum})
+    
+
+class Reset_Password(View):
+
+    def get(self,request):
+
+        form = ForgetForm
+
+        return render(request,"reset.html",{'form':form})
+    
+    def post(self,request):
+
+        form = ForgetForm(request.POST)
+
+        if form.is_valid():
+
+            username = form.cleaned_data.get("username")
+
+            email = form.cleaned_data.get("email")
+
+            password = form.cleaned_data.get("new_password")
+
+            data = User.objects.get(username = username ,email = email)
+
+            if data:
+
+                data.password = make_password(password)
+
+                data.save()
+
+            return redirect("signin")
 
 
     
